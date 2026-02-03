@@ -54,6 +54,7 @@ class ProvidersConfig(BaseModel):
     zhipu: ProviderConfig = Field(default_factory=ProviderConfig)
     vllm: ProviderConfig = Field(default_factory=ProviderConfig)
     gemini: ProviderConfig = Field(default_factory=ProviderConfig)
+    deepseek: ProviderConfig = Field(default_factory=ProviderConfig)
 
 
 class GatewayConfig(BaseModel):
@@ -97,6 +98,7 @@ class Config(BaseSettings):
             self.providers.openrouter.api_key or
             self.providers.anthropic.api_key or
             self.providers.openai.api_key or
+            self.providers.deepseek.api_key or
             self.providers.gemini.api_key or
             self.providers.zhipu.api_key or
             self.providers.groq.api_key or
@@ -112,6 +114,8 @@ class Config(BaseSettings):
             return self.providers.zhipu.api_base
         if self.providers.vllm.api_base:
             return self.providers.vllm.api_base
+        if self.providers.deepseek.api_base:
+            return self.providers.deepseek.api_base
         return None
     
     class Config:

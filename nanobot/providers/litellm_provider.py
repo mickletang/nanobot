@@ -26,24 +26,11 @@ class LiteLLMProvider(LLMProvider):
         super().__init__(api_key, api_base)
         self.default_model = default_model
         
-        # Detect OpenRouter by api_key prefix or explicit api_base
-        self.is_openrouter = (
-            (api_key and api_key.startswith("sk-or-")) or
-            (api_base and "openrouter" in api_base)
-        )
-        
-        # Track if using custom endpoint (vLLM, etc.)
-        self.is_vllm = bool(api_base) and not self.is_openrouter
-        
+        self.is_openrouter = False
+        self.is_vllm = False
         # Configure LiteLLM based on provider
         if api_key:
-            if self.is_openrouter:
-                # OpenRouter mode - set key
-                os.environ["OPENROUTER_API_KEY"] = api_key
-            elif self.is_vllm:
-                # vLLM/custom endpoint - uses OpenAI-compatible API
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif "anthropic" in default_model:
+            if "anthropic" in default_model:
                 os.environ.setdefault("ANTHROPIC_API_KEY", api_key)
             elif "openai" in default_model or "gpt" in default_model:
                 os.environ.setdefault("OPENAI_API_KEY", api_key)
@@ -53,7 +40,24 @@ class LiteLLMProvider(LLMProvider):
                 os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
             elif "groq" in default_model:
                 os.environ.setdefault("GROQ_API_KEY", api_key)
-        
+            elif "deepseek" in default_model.lower():
+                os.environ.setdefault("DEEPSEEK_API_KEY", api_key)
+            else:    
+                # Detect OpenRouter by api_key prefix or explicit api_base
+                self.is_openrouter = (
+                    (api_key and api_key.startswith("sk-or-")) or
+                    (api_base and "openrouter" in api_base)
+                )
+                
+                # Track if using custom endpoint (vLLM, etc.)
+                self.is_vllm = bool(api_base) and not self.is_openrouter
+                if self.is_openrouter:
+                    # OpenRouter mode - set key
+                    os.environ["OPENROUTER_API_KEY"] = api_key
+                elif self.is_vllm:
+                    # vLLM/custom endpoint - uses OpenAI-compatible API
+                    os.environ["OPENAI_API_KEY"] = api_key
+
         if api_base:
             litellm.api_base = api_base
         
@@ -104,6 +108,9 @@ class LiteLLMProvider(LLMProvider):
         # For Gemini, ensure gemini/ prefix if not already present
         if "gemini" in model.lower() and not model.startswith("gemini/"):
             model = f"gemini/{model}"
+
+        if "deepseek" in model.lower() and not model.startswith("deepseek/"):
+            model = f"deepseek/{model}"
         
         kwargs: dict[str, Any] = {
             "model": model,
@@ -120,6 +127,8 @@ class LiteLLMProvider(LLMProvider):
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
         
+        print(kwargs)
+
         try:
             response = await acompletion(**kwargs)
             return self._parse_response(response)
